@@ -22,9 +22,20 @@ function newsFeed() {
   const newsListLength = newsFeed.length;
   const showList = 10;
   const maxPage = newsListLength / showList;
-  console.log(newsFeed.length);
 
-  newsList.push("<ul>");
+  let template = `
+    <div class="container mx-auto p-4">
+      <h1>Hacker News</h1>
+      <ul>
+        {{__news_feed__}}
+      </ul>
+      <div>
+        <a href="#/page/{{__prev_page__}}">이전 페이지</a>
+        <a href="#/page/{{__next_page__}}">다음 페이지</a>
+      </div>
+    </div>
+  `;
+
   for (
     let i = (store.currentPage - 1) * showList;
     i < store.currentPage * showList;
@@ -39,20 +50,18 @@ function newsFeed() {
       </li>
     `);
   }
-  newsList.push("</ul>");
 
-  newsList.push(`
-    <div>
-      <a href="#/page/${
-        store.currentPage > 1 ? store.currentPage - 1 : 1
-      }">이전 페이지</a>
-      <a href="#/page/${
-        store.currentPage < maxPage ? store.currentPage + 1 : maxPage
-      }">다음 페이지</a>
-    </div>
-  `);
+  template = template.replace("{{__news_feed__}}", newsList.join(""));
+  template = template.replace(
+    "{{__prev_page__}}",
+    store.currentPage > 1 ? store.currentPage - 1 : 1
+  );
+  template = template.replace(
+    "{{__next_page__}}",
+    store.currentPage < maxPage ? store.currentPage + 1 : maxPage
+  );
 
-  container.innerHTML = newsList.join("");
+  container.innerHTML = template;
 }
 
 // NOTE: news 디테일
