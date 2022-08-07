@@ -1,41 +1,89 @@
 const ajax = new XMLHttpRequest();
 const container = document.getElementById("root");
 const content = document.createElement("div");
-const NEWS_URL = "https://api.hnpwa.com/v0/news/1.json";
+const NEWS_URL = "https://api.hnpwa.com/v0/news/@page.json";
 const CONTENT_URL = "https://api.hnpwa.com/v0/item/@id.json";
+const store = {
+  currentPage: 1,
+};
 
-ajax.open("GET", NEWS_URL, false);
-ajax.send();
-
-const newsFeed = JSON.parse(ajax.response);
-const ul = document.createElement("ul");
-
-window.addEventListener("hashchange", function () {
-  const id = location.hash.substr(1);
-
-  ajax.open("GET", CONTENT_URL.replace("@id", id), false);
+// NOTE: get 요청 xhr 함수
+function getData(url) {
+  ajax.open("GET", url, false);
   ajax.send();
 
-  const newsContent = JSON.parse(ajax.response);
-  const title = document.createElement("h1");
-
-  title.innerHTML = newsContent.title;
-
-  content.appendChild(title);
-});
-
-for (let i = 0; i < 10; i++) {
-  const item = newsFeed[i];
-  const li = document.createElement("li");
-  const a = document.createElement("a");
-
-  a.href = `#${item.id}`;
-  a.innerHTML = `${item.title} (${item.comments_count})`;
-
-  // a.addEventListener("click", (e) => {});
-
-  li.appendChild(a);
-  ul.appendChild(li);
+  return JSON.parse(ajax.response);
 }
-container.appendChild(ul);
-container.appendChild(content);
+
+// NOTE: news 리스트
+function newsFeed() {
+  const newsList = [];
+  const newsFeed = getData(NEWS_URL.replace("@page", store.currentPage));
+  const newsListLength = newsFeed.length;
+  const showList = 10;
+  const maxPage = newsListLength / showList;
+  console.log(newsFeed.length);
+
+  newsList.push("<ul>");
+  for (
+    let i = (store.currentPage - 1) * showList;
+    i < store.currentPage * showList;
+    i++
+  ) {
+    const item = newsFeed[i];
+    newsList.push(`
+      <li>
+        <a href="#/show/${item.id}">
+          ${item.title} (${item.comments_count})
+        </a>
+      </li>
+    `);
+  }
+  newsList.push("</ul>");
+
+  newsList.push(`
+    <div>
+      <a href="#/page/${
+        store.currentPage > 1 ? store.currentPage - 1 : 1
+      }">이전 페이지</a>
+      <a href="#/page/${
+        store.currentPage < maxPage ? store.currentPage + 1 : maxPage
+      }">다음 페이지</a>
+    </div>
+  `);
+
+  container.innerHTML = newsList.join("");
+}
+
+// NOTE: news 디테일
+function newsDetail() {
+  const id = location.hash.substr(7);
+
+  const newsContent = getData(CONTENT_URL.replace("@id", id));
+
+  container.innerHTML = `
+    <h1>${newsContent.title}</h1>
+    <div>
+      <a href="#/page/${store.currentPage}">목록으로</a>
+    </div>
+  `;
+}
+
+// NOTE: router 함수
+function router() {
+  const routePath = location.hash;
+  console.log(routePath);
+  if (routePath === "") {
+    newsFeed();
+  } else if (routePath.indexOf("#/page/") >= 0) {
+    store.currentPage = Number(routePath.substr(7));
+    newsFeed();
+  } else {
+    console.log("newsDetail");
+    newsDetail();
+  }
+}
+
+window.addEventListener("hashchange", router);
+
+router();
