@@ -3,15 +3,28 @@ type Store = {
   feeds: NewsFeed[];
 };
 
-type NewsFeed = {
+type News = {
   id: number;
-  comments_count: number;
+  time_ago: string;
+  title: string;
   url: string;
   user: string;
-  timeago: string;
+  content: string;
+};
+
+type NewsFeed = News & {
+  comments_count: number;
   points: number;
-  title: string;
   read?: boolean;
+};
+
+type NewsDetail = News & {
+  comments: [];
+};
+
+type NewsComment = News & {
+  comments: [];
+  level: number;
 };
 
 const ajax: XMLHttpRequest = new XMLHttpRequest();
@@ -24,14 +37,14 @@ const store: Store = {
 };
 
 // NOTE: get 요청 xhr 함수
-function getData(url: string) {
+function getData<AjaxResponse>(url: string): AjaxResponse {
   ajax.open("GET", url, false);
   ajax.send();
 
   return JSON.parse(ajax.response);
 }
 
-function makeFeeds(feeds) {
+function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
   for (let i = 0; i < feeds.length; i++) {
     feeds[i].read = false;
   }
@@ -39,7 +52,7 @@ function makeFeeds(feeds) {
   return feeds;
 }
 
-function updateView(html: string) {
+function updateView(html: string): void {
   if (container) {
     container.innerHTML = html;
   } else {
@@ -48,7 +61,7 @@ function updateView(html: string) {
 }
 
 // NOTE: news 리스트
-function newsFeed() {
+function newsFeed(): void {
   let newsFeed: NewsFeed[] = store.feeds;
   const newsList = [];
   const newsListLength = newsFeed.length;
@@ -77,7 +90,7 @@ function newsFeed() {
 
   if (newsFeed.length === 0) {
     newsFeed = store.feeds = makeFeeds(
-      getData(NEWS_URL.replace("@page", store.currentPage))
+      getData<NewsFeed[]>(NEWS_URL.replace("@page", String(store.currentPage)))
     );
   }
 
@@ -115,20 +128,20 @@ function newsFeed() {
   template = template.replace("{{__news_feed__}}", newsList.join(""));
   template = template.replace(
     "{{__prev_page__}}",
-    store.currentPage > 1 ? store.currentPage - 1 : 1
+    String(store.currentPage > 1 ? store.currentPage - 1 : 1)
   );
   template = template.replace(
     "{{__next_page__}}",
-    store.currentPage < maxPage ? store.currentPage + 1 : maxPage
+    String(store.currentPage < maxPage ? store.currentPage + 1 : maxPage)
   );
 
   updateView(template);
 }
 
 // NOTE: news 디테일
-function newsDetail() {
+function newsDetail(): void {
   const id = location.hash.substr(7);
-  const newsContent = getData(CONTENT_URL.replace("@id", id));
+  const newsContent = getData<NewsDetail>(CONTENT_URL.replace("@id", id));
   let template = `
   <div class="bg-gray-600 min-h-screen pb-8">
     <div class="bg-white text-xl">
@@ -160,13 +173,13 @@ function newsDetail() {
     }
   }
 
-  function makeComment(comments, called = 0) {
+  function makeComment(comments: NewsComment[]): string {
     let commentString = [];
 
     for (let i = 0; i < comments.length; i++) {
-      const item = comments[i];
+      const item: NewsComment = comments[i];
       commentString.push(`
-        <div style="padding-left: ${called * 40}px;" class="mt-4">
+        <div style="padding-left: ${item.level * 40}px;" class="mt-4">
           <div class="text-gray-400">
             <i class="fa fa-sort-up mr-2"></i>
             <strong>${item.user}</strong> ${item.time_ago}
@@ -176,7 +189,7 @@ function newsDetail() {
       `);
 
       if (item.comments.length > 0) {
-        commentString.push(makeComment(item.comments, called + 1));
+        commentString.push(makeComment(item.comments));
       }
     }
 
@@ -189,7 +202,7 @@ function newsDetail() {
 }
 
 // NOTE: router 함수
-function router() {
+function router(): void {
   const routePath = location.hash;
   console.log(routePath);
   if (routePath === "") {
