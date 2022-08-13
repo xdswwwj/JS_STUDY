@@ -36,34 +36,48 @@ const store: Store = {
   feeds: [],
 };
 
+function applyApiMixins(targetClass: any, baseClasses: any[]): void {
+  baseClasses.forEach((baseClass) => {
+    Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        baseClass.prototype,
+        name
+      );
+
+      if (descriptor) {
+        Object.defineProperty(targetClass.prototype, name, descriptor);
+      }
+    });
+  });
+}
+
 class Api {
-  url: string;
-  ajax: XMLHttpRequest;
+  getRequest<AjaxResponse>(url: string): AjaxResponse {
+    const ajax = new XMLHttpRequest();
+    ajax.open("GET", url, false);
+    ajax.send();
 
-  constructor(url: string) {
-    this.url = url;
-    this.ajax = new XMLHttpRequest();
-  }
-
-  protected getRequest<AjaxResponse>(): AjaxResponse {
-    this.ajax.open("GET", this.url, false);
-    this.ajax.send();
-
-    return JSON.parse(this.ajax.response);
+    return JSON.parse(ajax.response);
   }
 }
 
-class NewsFeedApi extends Api {
-  getData(): NewsFeed[] {
-    return this.getRequest<NewsFeed[]>();
+class NewsFeedApi {
+  getData(page: number): NewsFeed[] {
+    return this.getRequest<NewsFeed[]>(NEWS_URL.replace("@page", String(page)));
   }
 }
 
-class NewsDetailApi extends Api {
-  getData(): NewsDetail {
-    return this.getRequest<NewsDetail>();
+class NewsDetailApi {
+  getData(id: string): NewsDetail {
+    return this.getRequest<NewsDetail>(CONTENT_URL.replace("@id", String(id)));
   }
 }
+
+interface NewsFeedApi extends Api {}
+interface NewsDetailApi extends Api {}
+
+applyApiMixins(NewsFeedApi, [Api]);
+applyApiMixins(NewsDetailApi, [Api]);
 
 function makeFeeds(feeds: NewsFeed[]): NewsFeed[] {
   for (let i = 0; i < feeds.length; i++) {
@@ -83,8 +97,7 @@ function updateView(html: string): void {
 
 // NOTE: news 리스트
 function newsFeed(): void {
-  const newsUrl: string = NEWS_URL.replace("@page", String(store.currentPage));
-  const api = new NewsFeedApi(newsUrl);
+  const api = new NewsFeedApi();
   let newsFeed: NewsFeed[] = store.feeds;
   const newsList = [];
   const newsListLength = newsFeed.length;
@@ -112,7 +125,7 @@ function newsFeed(): void {
     `;
 
   if (newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(api.getData());
+    newsFeed = store.feeds = makeFeeds(api.getData(store.currentPage));
   }
 
   for (
@@ -162,9 +175,9 @@ function newsFeed(): void {
 // NOTE: news 디테일
 function newsDetail(): void {
   const id = location.hash.substr(7);
-  const newsContentUrl = CONTENT_URL.replace("@id", id);
-  const api = new NewsDetailApi(newsContentUrl);
-  const newsContent = api.getData();
+  // const newsContentUrl = CONTENT_URL.replace(id);
+  const api = new NewsDetailApi();
+  const newsContent = api.getData(id);
   let template = `
   <div class="bg-gray-600 min-h-screen pb-8">
     <div class="bg-white text-xl">
