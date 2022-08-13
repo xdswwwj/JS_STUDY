@@ -1,31 +1,31 @@
-interface Store {
+type Store = {
   currentPage: number;
   feeds: NewsFeed[];
-}
+};
 
-interface News {
-  readonly id: number;
-  readonly time_ago: string;
-  readonly title: string;
-  readonly url: string;
-  readonly user: string;
-  readonly content: string;
-}
+type News = {
+  id: number;
+  time_ago: string;
+  title: string;
+  url: string;
+  user: string;
+  content: string;
+};
 
-interface NewsFeed extends News {
-  readonly comments_count: number;
-  readonly points: number;
+type NewsFeed = News & {
+  comments_count: number;
+  points: number;
   read?: boolean;
-}
+};
 
-interface NewsDetail extends News {
-  readonly comments: [];
-}
+type NewsDetail = News & {
+  comments: [];
+};
 
-interface NewsComment extends News {
-  readonly comments: [];
-  readonly level: number;
-}
+type NewsComment = News & {
+  comments: [];
+  level: number;
+};
 
 const ajax: XMLHttpRequest = new XMLHttpRequest();
 const container: HTMLElement | null = document.getElementById("root");
